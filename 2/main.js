@@ -15,6 +15,4 @@ function init(){
     }
 
     pintarJugador();
-    window.addEventListener("keydown", keyDownHandler, false);
-    window.addEventListener("keyup", keyUpHandler, false);
 }
