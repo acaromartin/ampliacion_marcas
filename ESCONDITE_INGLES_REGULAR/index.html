@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>El escondite inglés regular</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .board { display: flex; flex-direction: column-reverse; width: 250px; margin-top: 10px; }
+    .cell { height: 30px; border: 1px solid #333; display: flex; justify-content: space-around; align-items: center; }
+    .player { width: 20px; height: 20px; border-radius: 50%; }
+    .P0 { background-color: red; }
+    .P1 { background-color: green; }
+    .P2 { background-color: blue; }
+    .heart { border: 2px solid pink; }
+    button { margin: 5px; }
+    .log { margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>El escondite inglés regular</h2>
+<div id="controls"></div>
+<div class="board" id="board"></div>
+<button onclick="nextTurn()">Siguiente turno</button>
+
+<div class="log" id="log"></div>
+
+<script>
+const numPlayers = 3;
+const trackLength = 10;
+let positions = Array(numPlayers).fill(0);
+let hearts = Array(numPlayers).fill(false);
+let moves = Array(numPlayers).fill("parar");
+let blackDiceHistory = [];
+let diceBag = ["negro1", "negro2", "negro3", "rojo"];
+const board = document.getElementById('board');
+const controls = document.getElementById('controls');
+const log = document.getElementById('log');
+
+function init() {
+  board.innerHTML = "";
+  controls.innerHTML = "";
+  for (let i = 0; i < trackLength; i++) {
+    const row = document.createElement('div');
+    row.classList.add('cell');
+    row.id = `row-${i}`;
+    for (let j = 0; j < numPlayers; j++) {
+      const slot = document.createElement('div');
+      slot.id = `P${j}-pos${i}`;
+      row.appendChild(slot);
+    }
+    board.appendChild(row);
+  }
+
+  for (let i = 0; i < numPlayers; i++) {
+    const btnGroup = document.createElement('div');
+    btnGroup.innerHTML = `
+      Jugador ${i + 1}: 
+      <button onclick="setMove(${i}, 'andar')">Andar</button>
+      <button onclick="setMove(${i}, 'parar')">Parar</button>
+      <span id="status-${i}">[Parado]</span>
+    `;
+    controls.appendChild(btnGroup);
+  }
+
+  draw();
+}
+
+function draw() {
+  // Limpia todos los jugadores
+  document.querySelectorAll('.player').forEach(p => p.remove());
+
+  // Dibuja cada jugador en su posición
+  for (let i = 0; i < numPlayers; i++) {
+    const cell = document.getElementById(`P${i}-pos${positions[i]}`);
+    const token = document.createElement('div');
+    token.classList.add('player', `P${i}`);
+    if (hearts[i]) token.classList.add('heart');
+    cell.appendChild(token);
+  }
+}
+
+function setMove(player, action) {
+  moves[player] = action;
+  document.getElementById(`status-${player}`).innerText = `[${action.charAt(0).toUpperCase() + action.slice(1)}]`;
+}
+
+function throwDie(type) {
+  const rolls = {
+    negro1: [1, 1, 1, 1, 2, 2],
+    negro2: [1, 1, 1, 1, 0, 0],
+    negro3: [1, 1, 0, 0, 0, 0],
+    rojo: [1, 1, 1, 1, 1, 0]
+  };
+  const faces = rolls[type];
+  return faces[Math.floor(Math.random() * faces.length)];
+}
+
+function nextTurn() {
+  const die = diceBag.splice(Math.floor(Math.random() * diceBag.length), 1)[0];
+  const dieType = die.startsWith("negro") ? "Negro" : "Rojo";
+  let logText = `<strong>Dado extraído:</strong> ${dieType} (${die})<br>`;
+
+  if (["negro1", "negro2", "negro3"].includes(die)) blackDiceHistory.push(die);
+
+  for (let i = 0; i < numPlayers; i++) {
+    const action = moves[i];
+    let info = `Jugador ${i + 1} - ${action.toUpperCase()}: `;
+
+    if (action === 'parar') {
+      if (die === "rojo" && !hearts[i]) {
+        hearts[i] = true;
+        info += "¡Gana corazón!";
+      } else {
+        info += "Sin efecto.";
+      }
+    } else {
+      if (die.startsWith("negro")) {
+        let total = blackDiceHistory.map(d => throwDie(d)).reduce((a, b) => a + b, 0);
+        positions[i] = Math.min(positions[i] + total, trackLength - 1);
+        info += `Avanza +${total} posiciones.`;
+      } else {
+        if (hearts[i]) {
+          hearts[i] = false;
+          info += "Pierde el corazón.";
+        } else {
+          let allDice = [...blackDiceHistory, "rojo"];
+          let total = allDice.map(d => throwDie(d)).reduce((a, b) => a + b, 0);
+          positions[i] = Math.max(positions[i] - total, 0);
+          info += `Retrocede -${total} posiciones.`;
+        }
+      }
+    }
+
+    logText += info + "<br>";
+  }
+
+  if (diceBag.length === 0) diceBag = ["negro1", "negro2", "negro3", "rojo"];
+  log.innerHTML = logText + "<hr>" + log.innerHTML;
+  draw();
+  checkWinner();
+}
+
+function checkWinner() {
+  const winners = positions.map((pos, i) => pos >= trackLength - 1 ? i + 1 : null).filter(n => n);
+  if (winners.length > 0) {
+    alert(`Ganador${winners.length > 1 ? 'es' : ''}: Jugador${winners.length > 1 ? 'es' : ''} ${winners.join(', ')}`);
+    resetGame();
+  }
+}
+
+function resetGame() {
+  positions = Array(numPlayers).fill(0);
+  hearts = Array(numPlayers).fill(false);
+  blackDiceHistory = [];
+  diceBag = ["negro1", "negro2", "negro3", "rojo"];
+  log.innerHTML = "";
+  draw();
+}
+
+init();
+</script>
+
+</body>
+</html>
