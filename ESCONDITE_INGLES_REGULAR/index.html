@@ -67,10 +67,7 @@ function init() {
 }
 
 function draw() {
-  // Limpia todos los jugadores
   document.querySelectorAll('.player').forEach(p => p.remove());
-
-  // Dibuja cada jugador en su posición
   for (let i = 0; i < numPlayers; i++) {
     const cell = document.getElementById(`P${i}-pos${positions[i]}`);
     const token = document.createElement('div');
